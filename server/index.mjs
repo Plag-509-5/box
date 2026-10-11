@@ -379,7 +379,6 @@ app.get('/api/auth/google', (_req, res) => {
   });
   const destination = googleOAuth.generateAuthUrl({
     access_type: 'online',
-    prompt: 'select_account',
     scope: ['openid', 'email', 'profile'],
     state,
   });
