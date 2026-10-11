@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { API_BASE, api, avatarSrc, type PublicUser, type UserPreferences } from '../auth/api';
+import { api, avatarSrc, type PublicUser, type UserPreferences } from '../auth/api';
 import { useAuth } from '../auth/AuthContext';
 import { Btn, Panel } from './Screens';
 import { Logo, Mark, Signature } from './Brand';
@@ -12,17 +12,20 @@ export function AuthScreen({ onClose }: { onClose: () => void }) {
   const [password, setPassword] = useState('');
   const [service, setService] = useState<'checking' | 'online' | 'offline'>('checking');
   const [googleEnabled, setGoogleEnabled] = useState(false);
+  const [googleStartUrl, setGoogleStartUrl] = useState('');
+  const [googleRedirecting, setGoogleRedirecting] = useState(false);
 
   useEffect(() => {
     let active = true;
     const check = async () => {
       const [healthy, config] = await Promise.all([
         api<{ ok: boolean }>('/health').then(() => true).catch(() => false),
-        api<{ auth?: { google?: boolean } }>('/config').catch(() => null),
+        api<{ auth?: { google?: boolean; googleStartUrl?: string | null } }>('/config').catch(() => null),
       ]);
       if (!active) return;
       setService(healthy ? 'online' : 'offline');
       setGoogleEnabled(config?.auth?.google === true);
+      setGoogleStartUrl(config?.auth?.googleStartUrl || '');
     };
     void check();
     const timer = window.setInterval(() => void check(), 10_000);
@@ -127,12 +130,21 @@ export function AuthScreen({ onClose }: { onClose: () => void }) {
       </div>
       <button
         type="button"
-        disabled={!googleEnabled || service !== 'online' || auth.busy}
-        onClick={() => window.location.assign(`${API_BASE}/auth/google`)}
+        disabled={!googleEnabled || !googleStartUrl || service !== 'online' || auth.busy || googleRedirecting}
+        onClick={() => {
+          if (!googleStartUrl || googleRedirecting) return;
+          setGoogleRedirecting(true);
+          window.location.assign(googleStartUrl);
+        }}
         className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white px-4 py-2.5 text-[12.5px] font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-45"
       >
-        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white font-display text-[16px] font-bold text-[#4285f4]">G</span>
-        Continuer avec Google
+        <svg className="h-5 w-5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+          <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.55-.2-2.27H12v4.51h6.44a5.5 5.5 0 0 1-2.39 3.61v3h3.87c2.26-2.08 3.57-5.15 3.57-8.85Z" />
+          <path fill="#34A853" d="M12 24c3.24 0 5.96-1.08 7.95-2.91l-3.87-3c-1.08.72-2.46 1.15-4.08 1.15-3.14 0-5.8-2.12-6.75-4.97H1.26v3.09A12 12 0 0 0 12 24Z" />
+          <path fill="#FBBC05" d="M5.25 14.27a7.2 7.2 0 0 1 0-4.54V6.64H1.26a12 12 0 0 0 0 10.72l3.99-3.09Z" />
+          <path fill="#EA4335" d="M12 4.77c1.76 0 3.34.6 4.59 1.8l3.44-3.44C17.95 1.18 15.23 0 12 0A12 12 0 0 0 1.26 6.64l3.99 3.09c.95-2.85 3.61-4.96 6.75-4.96Z" />
+        </svg>
+        {googleRedirecting ? 'Redirection vers Google…' : 'Continuer avec Google'}
       </button>
       {!googleEnabled && service === 'online' && (
         <p className="mt-2 text-center text-[10.5px] leading-relaxed text-slate-600">

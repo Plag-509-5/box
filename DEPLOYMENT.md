@@ -48,7 +48,7 @@ Ne mets jamais `MONGODB_URI`, `JWT_SECRET` ou `GOOGLE_CLIENT_SECRET` dans une va
 
 Pour un essai local, l’URI de redirection est `http://localhost:8787/api/auth/google/callback` et l’origine JavaScript `http://localhost:8787`. Le bouton Google s’active lorsque l’API confirme que ses identifiants sont configurés. Le serveur valide l’état OAuth, vérifie le jeton Google côté serveur et exige une adresse email vérifiée. Un compte Box existant avec la même adresse vérifiée est associé au compte Google sans remplacer son mot de passe.
 
-`APP_URL` doit désigner l’origine publique du site (par exemple `https://box.example`), sans chemin. Son origine doit être identique à celle de `GOOGLE_REDIRECT_URI` : même protocole HTTPS, hôte et port public. Les cookies OAuth et de session sont limités à l’hôte du callback; le serveur redirige donc l’amorce OAuth vers cet hôte avant de créer l’état, puis revient à sa racine. Si les origines diffèrent, le serveur avertit dans ses logs et privilégie l’origine OAuth pour que l’API reçoive le cookie.
+`APP_URL` doit désigner l’origine publique du site (par exemple `https://box.example`), sans chemin. Son origine doit être identique à celle de `GOOGLE_REDIRECT_URI` : même protocole HTTPS, hôte et port public. Les cookies OAuth et de session sont limités à l’hôte du callback; `/api/config` fournit donc au bouton Google une URL de démarrage sur cet hôte et le callback revient à sa racine. Si les origines diffèrent, le serveur avertit dans ses logs et privilégie l’origine OAuth pour que les cookies restent sur le même hôte. Accède au site avec cette origine canonique.
 
 Après configuration, vérifie `GET /api/config` : la réponse doit contenir `"auth":{"google":true}`. Aucun secret Google ne part au navigateur.
 
