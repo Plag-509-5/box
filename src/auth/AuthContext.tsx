@@ -11,6 +11,7 @@ import {
 
 interface AuthContextValue {
   user: BoxUser | null;
+  oauthResult: 'success' | 'error' | null;
   friendships: Friendship[];
   cloudMatches: CloudMatch[];
   loading: boolean;
@@ -45,6 +46,7 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<BoxUser | null>(null);
+  const [oauthResult, setOauthResult] = useState<'success' | 'error' | null>(null);
   const [friendships, setFriendships] = useState<Friendship[]>([]);
   const [cloudMatches, setCloudMatches] = useState<CloudMatch[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +77,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let live = true;
+    const locationUrl = new URL(window.location.href);
+    const result = locationUrl.searchParams.get('oauth');
+    if (result === 'success' || result === 'error') {
+      setOauthResult(result);
+      if (result === 'error') setError('La connexion Google a échoué ou a été annulée. Réessaie.');
+      locationUrl.searchParams.delete('oauth');
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${locationUrl.pathname}${locationUrl.search}${locationUrl.hash}`,
+      );
+    }
     api<{ user: BoxUser }>('/users/me').catch(() => null).then(async (session) => {
       if (!live) return;
       if (session?.user) {
@@ -106,6 +120,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      oauthResult,
       friendships,
       cloudMatches,
       loading,
@@ -206,6 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }),
     [
       user,
+      oauthResult,
       friendships,
       cloudMatches,
       loading,
