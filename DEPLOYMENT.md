@@ -100,13 +100,20 @@ MongoDB Atlas doit être accessible depuis le conteneur. Termine TLS au niveau d
 
 ## 5. Pterodactyl — egg Node.js
 
-Le dépôt est compatible avec un egg Node.js, à condition de choisir une image **Node 22.12+** et d’utiliser la racine du dépôt comme répertoire du serveur.
+Le déploiement Pterodactyl se fait avec un egg Node.js et une image **Node 22.12+**. Le build est fait avant l’envoi sur le panel ; Pterodactyl n’a donc pas besoin des dépendances de développement.
 
-**Script d’installation/build** (à exécuter lors de l’installation ou d’une réinstallation du serveur) :
+Depuis le dépôt, construis l’application et crée un paquet contenant les fichiers runtime :
 
 ```sh
-npm ci --include=dev
+npm ci
 npm run build
+zip -r Box-Pterodactyl.zip package.json package-lock.json server dist DEPLOYMENT.md
+```
+
+Téléverse et extrais le ZIP à la racine du serveur Pterodactyl. Configure le script d’installation de l’egg pour installer uniquement les dépendances de production :
+
+```sh
+npm ci --omit=dev
 ```
 
 **Commande de démarrage** dans Startup :
@@ -114,6 +121,8 @@ npm run build
 ```sh
 npm start
 ```
+
+`npm start` sert directement le dossier `dist/` et s’arrête avec un message explicite si le build manque. Après une mise à jour du code, reconstruis le paquet localement et retéléverse-le ; ne lance pas `npm run build` sur le panel.
 
 Dans l’onglet Variables du serveur, ajoute les variables suivantes. Ne mets pas de vrais secrets dans le dépôt :
 

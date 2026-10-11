@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import path from 'node:path';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { randomBytes, timingSafeEqual } from 'node:crypto';
 import { createServer } from 'node:http';
@@ -35,6 +36,10 @@ const googleStateCookie = 'box_google_oauth_state';
 const peerKey = 'peerjs';
 const peerConcurrentLimit = Math.max(50, Math.min(10_000, Number(process.env.PEER_CONCURRENT_LIMIT) || 2_000));
 
+if (prod && !existsSync(path.join(root, 'dist', 'index.html'))) {
+  console.error('[Box] Build de production introuvable. Fournissez le dossier dist/ précompilé avant npm start.');
+  process.exit(1);
+}
 if (!mongoUri) {
   console.error('[Box] MONGODB_URI manquant. Copiez .env.example vers .env, renseignez une URI Atlas avec un mot de passe renouvelé, puis lancez node server/index.mjs.');
   process.exit(1);
