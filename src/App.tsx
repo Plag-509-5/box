@@ -121,11 +121,14 @@ export default function App() {
     if (auth.oauthResult === 'success' && auth.user) {
       oauthHandledRef.current = true;
       setView('dashboard');
+    } else if (auth.oauthResult === 'success' && !auth.loading) {
+      oauthHandledRef.current = true;
+      setView('auth');
     } else if (auth.oauthResult === 'error') {
       oauthHandledRef.current = true;
       setView('auth');
     }
-  }, [auth.oauthResult, auth.user]);
+  }, [auth.oauthResult, auth.user, auth.loading]);
 
   // Authenticated identity and preferences come from MongoDB.
   useEffect(() => {

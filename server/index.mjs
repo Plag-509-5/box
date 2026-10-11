@@ -29,10 +29,21 @@ const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim() || '';
 const googleRedirectUri = process.env.GOOGLE_REDIRECT_URI?.trim() ||
   (!prod ? `http://localhost:${port}/api/auth/google/callback` : '');
 const googleReady = !!(googleClientId && googleClientSecret && googleRedirectUri);
+const googleCallbackOrigin = googleRedirectUri ? new URL(googleRedirectUri).origin : '';
+const configuredAppOrigin = process.env.APP_URL?.trim()
+  ? new URL(process.env.APP_URL.trim()).origin
+  : '';
 const googleOAuth = googleReady
   ? new OAuth2Client(googleClientId, googleClientSecret, googleRedirectUri)
   : null;
 const googleStateCookie = 'box_google_oauth_state';
+
+if (googleReady && configuredAppOrigin && configuredAppOrigin !== googleCallbackOrigin) {
+  console.warn(
+    `[Box] APP_URL (${configuredAppOrigin}) ne correspond pas à l’origine OAuth (${googleCallbackOrigin}). ` +
+    'Le retour Google utilisera l’origine OAuth afin que le cookie de session soit envoyé à l’API.',
+  );
+}
 const peerKey = 'peerjs';
 const peerConcurrentLimit = Math.max(50, Math.min(10_000, Number(process.env.PEER_CONCURRENT_LIMIT) || 2_000));
 
@@ -226,12 +237,9 @@ function timingSafeStringEqual(left, right) {
 }
 
 function googleCallbackUrl(status) {
-  const configuredAppUrl = process.env.APP_URL?.trim();
-  const appOrigin = configuredAppUrl
-    ? new URL(configuredAppUrl).origin
-    : (googleRedirectUri ? new URL(googleRedirectUri).origin : `http://localhost:${port}`);
-  // APP_URL is an origin, not an OAuth endpoint. Always return to the SPA root,
-  // even if a deployment accidentally includes /api/auth/google in APP_URL.
+  // The session cookie is host-scoped, so return to the same public origin that
+  // received Google's callback. APP_URL is only a fallback without OAuth config.
+  const appOrigin = googleCallbackOrigin || configuredAppOrigin || `http://localhost:${port}`;
   const target = new URL('/', appOrigin);
   target.searchParams.set('oauth', status);
   return target.toString();
@@ -367,8 +375,16 @@ app.get('/api/health', asyncRoute(async (_req, res) => {
   res.json({ ok: true, online: { signaling: true } });
 }));
 
-app.get('/api/auth/google', (_req, res) => {
+app.get('/api/auth/google', (req, res) => {
   if (!googleOAuth) return res.status(503).json({ error: 'GOOGLE_NOT_CONFIGURED' });
+  // The state and session cookies are host-only. Start OAuth on the exact host
+  // configured for Google's callback so the browser sends both cookies there.
+  const callbackUrl = new URL(googleCallbackOrigin);
+  const callbackHost = callbackUrl.host.toLowerCase();
+  const requestHost = new URL(`${callbackUrl.protocol}//${req.get('host') || ''}`).host.toLowerCase();
+  if (requestHost !== callbackHost) {
+    return res.redirect(302, new URL('/api/auth/google', googleCallbackOrigin).toString());
+  }
   const state = randomBytes(32).toString('hex');
   res.cookie(googleStateCookie, state, {
     httpOnly: true,

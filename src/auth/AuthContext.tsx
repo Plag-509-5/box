@@ -98,6 +98,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } catch {
           /* Session is still usable if social data temporarily fails. */
         }
+      } else if (result === 'success') {
+        setError(
+          'Google a confirmé la connexion, mais Box n’a pas reçu la session. Vérifie que APP_URL et GOOGLE_REDIRECT_URI utilisent le même domaine HTTPS, puis réessaie.',
+        );
       }
       if (live) setLoading(false);
     });
