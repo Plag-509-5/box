@@ -48,6 +48,8 @@ Ne mets jamais `MONGODB_URI`, `JWT_SECRET` ou `GOOGLE_CLIENT_SECRET` dans une va
 
 Pour un essai local, l’URI de redirection est `http://localhost:8787/api/auth/google/callback` et l’origine JavaScript `http://localhost:8787`. Le bouton Google s’active lorsque l’API confirme que ses identifiants sont configurés. Le serveur valide l’état OAuth, vérifie le jeton Google côté serveur et exige une adresse email vérifiée. Un compte Box existant avec la même adresse vérifiée est associé au compte Google sans remplacer son mot de passe.
 
+`APP_URL` doit désigner l’origine du site (par exemple `https://box.example`), pas `/api/auth/google` ni son callback. Le serveur renvoie toujours vers la racine de cette origine après OAuth.
+
 Après configuration, vérifie `GET /api/config` : la réponse doit contenir `"auth":{"google":true}`. Aucun secret Google ne part au navigateur.
 
 ## 3. Lancer le site et l’API

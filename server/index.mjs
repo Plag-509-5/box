@@ -226,9 +226,13 @@ function timingSafeStringEqual(left, right) {
 }
 
 function googleCallbackUrl(status) {
-  const base = process.env.APP_URL?.trim() ||
-    (googleRedirectUri ? new URL(googleRedirectUri).origin : `http://localhost:${port}`);
-  const target = new URL(base);
+  const configuredAppUrl = process.env.APP_URL?.trim();
+  const appOrigin = configuredAppUrl
+    ? new URL(configuredAppUrl).origin
+    : (googleRedirectUri ? new URL(googleRedirectUri).origin : `http://localhost:${port}`);
+  // APP_URL is an origin, not an OAuth endpoint. Always return to the SPA root,
+  // even if a deployment accidentally includes /api/auth/google in APP_URL.
+  const target = new URL('/', appOrigin);
   target.searchParams.set('oauth', status);
   return target.toString();
 }
