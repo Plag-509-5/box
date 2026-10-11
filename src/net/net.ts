@@ -1,4 +1,5 @@
 import Peer, { type DataConnection } from 'peerjs';
+import { API_BASE } from '../auth/api';
 import {
   decode,
   makeRoomCode,
@@ -10,7 +11,17 @@ import {
 } from './protocol';
 import type { Edge } from '../game/core';
 
-const PEER_OPTS = { debug: 0 as const };
+function peerOptions() {
+  const apiUrl = new URL(API_BASE);
+  return {
+    debug: 0 as const,
+    host: apiUrl.hostname,
+    port: apiUrl.port ? Number(apiUrl.port) : apiUrl.protocol === 'https:' ? 443 : 80,
+    secure: apiUrl.protocol === 'https:',
+    path: '/peerjs',
+    key: 'peerjs',
+  };
+}
 
 /* ==================================================================== */
 /* Presence: always-on peer named after the user, used for friend       */
@@ -45,7 +56,7 @@ export class Presence {
   private open() {
     if (this.destroyed) return;
     const id = userPeerId(this.username);
-    const peer = new Peer(id, PEER_OPTS);
+    const peer = new Peer(id, peerOptions());
     this.peer = peer;
     peer.on('open', () => {
       this.retry = 0;
@@ -257,7 +268,7 @@ export class Room {
       started: false,
     };
     this.set('opening');
-    const peer = new Peer(roomPeerId(code), PEER_OPTS);
+    const peer = new Peer(roomPeerId(code), peerOptions());
     this.peer = peer;
     peer.on('open', () => {
       this.set('lobby');
@@ -409,7 +420,7 @@ export class Room {
     this.cid = name.toLowerCase();
     this.code = code.trim().toUpperCase();
     this.set('opening');
-    const peer = new Peer(PEER_OPTS);
+    const peer = new Peer(peerOptions());
     this.peer = peer;
     peer.on('open', () => this.dialHost());
     peer.on('disconnected', () => {

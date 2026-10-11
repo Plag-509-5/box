@@ -60,6 +60,7 @@ const EMPTY_LOBBY: LobbyState = {
 export default function App() {
   const auth = useAuth();
   const authRef = useRef(auth);
+  const oauthHandledRef = useRef(false);
   authRef.current = auth;
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const gameRef = useRef<Game | null>(null);
@@ -114,6 +115,17 @@ export default function App() {
     const hash = location.hash.replace('#', '').toUpperCase();
     if (/^[A-Z0-9]{4,6}$/.test(hash)) pendingCodeRef.current = hash;
   }, []);
+
+  useEffect(() => {
+    if (oauthHandledRef.current) return;
+    if (auth.oauthResult === 'success' && auth.user) {
+      oauthHandledRef.current = true;
+      setView('dashboard');
+    } else if (auth.oauthResult === 'error') {
+      oauthHandledRef.current = true;
+      setView('auth');
+    }
+  }, [auth.oauthResult, auth.user]);
 
   // Authenticated identity and preferences come from MongoDB.
   useEffect(() => {

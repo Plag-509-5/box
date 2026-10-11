@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { api, avatarSrc, type PublicUser, type UserPreferences } from '../auth/api';
+import { API_BASE, api, avatarSrc, type PublicUser, type UserPreferences } from '../auth/api';
 import { useAuth } from '../auth/AuthContext';
 import { Btn, Panel } from './Screens';
 import { Logo, Mark, Signature } from './Brand';
@@ -11,16 +11,18 @@ export function AuthScreen({ onClose }: { onClose: () => void }) {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [service, setService] = useState<'checking' | 'online' | 'offline'>('checking');
+  const [googleEnabled, setGoogleEnabled] = useState(false);
 
   useEffect(() => {
     let active = true;
     const check = async () => {
-      try {
-        await api<{ ok: boolean }>('/health');
-        if (active) setService('online');
-      } catch {
-        if (active) setService('offline');
-      }
+      const [healthy, config] = await Promise.all([
+        api<{ ok: boolean }>('/health').then(() => true).catch(() => false),
+        api<{ auth?: { google?: boolean } }>('/config').catch(() => null),
+      ]);
+      if (!active) return;
+      setService(healthy ? 'online' : 'offline');
+      setGoogleEnabled(config?.auth?.google === true);
     };
     void check();
     const timer = window.setInterval(() => void check(), 10_000);
@@ -117,6 +119,27 @@ export function AuthScreen({ onClose }: { onClose: () => void }) {
               : 'Créer mon compte'}
         </Btn>
       </div>
+
+      <div className="my-4 flex items-center gap-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-slate-600">
+        <span className="h-px flex-1 bg-white/[0.07]" />
+        ou
+        <span className="h-px flex-1 bg-white/[0.07]" />
+      </div>
+      <button
+        type="button"
+        disabled={!googleEnabled || service !== 'online' || auth.busy}
+        onClick={() => window.location.assign(`${API_BASE}/auth/google`)}
+        className="flex w-full items-center justify-center gap-2.5 rounded-xl bg-white px-4 py-2.5 text-[12.5px] font-semibold text-slate-800 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-45"
+      >
+        <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white font-display text-[16px] font-bold text-[#4285f4]">G</span>
+        Continuer avec Google
+      </button>
+      {!googleEnabled && service === 'online' && (
+        <p className="mt-2 text-center text-[10.5px] leading-relaxed text-slate-600">
+          Connexion Google non configurée sur ce serveur.
+        </p>
+      )}
+
       <p className="mt-3 text-center text-[10.5px] leading-relaxed text-slate-600">
         Ton compte et tes préférences sont sauvegardés sur Box. Le mot de passe est haché côté serveur.
       </p>
